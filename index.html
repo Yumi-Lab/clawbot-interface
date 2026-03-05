@@ -93,6 +93,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .chat-inp{flex:1;padding:11px 15px;background:var(--bg-i);border:1px solid var(--br);border-radius:var(--r);color:var(--tp);font-family:var(--fm);font-size:.88rem;outline:none;resize:none;max-height:120px;min-height:42px;transition:var(--tr);line-height:1.4}
 .chat-inp:focus{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac-d)}
 .chat-inp::placeholder{color:var(--td)}
+.chat-sessions-bar{display:flex;align-items:center;gap:4px;padding:7px 14px 0;border-bottom:1px solid var(--br);overflow-x:auto;flex-shrink:0;scrollbar-width:none;background:var(--bg-c)}
+.chat-sessions-bar::-webkit-scrollbar{display:none}
+.sess-tab{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:7px 7px 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--ts);font-family:var(--fmo);font-size:.65rem;cursor:pointer;white-space:nowrap;transition:var(--tr);max-width:140px}
+.sess-tab:hover{background:var(--bg-i);color:var(--td)}
+.sess-tab.active{background:var(--bg);border-color:var(--br);color:var(--tp)}
+.sess-tab-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+.sess-del{opacity:.4;font-size:.75rem;line-height:1;flex-shrink:0;padding:0 2px;border-radius:3px}
+.sess-del:hover{opacity:1;background:var(--er);color:#fff}
+.sess-new{padding:4px 10px;border-radius:7px;border:1px solid var(--br);background:transparent;color:var(--ac);font-family:var(--fmo);font-size:.65rem;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:var(--tr)}
+.sess-new:hover{background:var(--ac-d)}
 .chat-mode-bar{display:flex;gap:6px;margin-bottom:8px}
 .chat-mode-btn{padding:3px 12px;border-radius:20px;border:1px solid var(--br);background:transparent;color:var(--td);font-family:var(--fmo);font-size:.62rem;cursor:pointer;transition:var(--tr)}
 .chat-mode-btn.active{background:var(--ac-d);border-color:var(--ac-m);color:var(--ac)}
@@ -315,12 +325,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <!-- ─── CHAT ─── -->
   <div class="pnl active" id="pnl-chat">
     <div class="chat-wrap">
-      <div class="chat-msgs" id="chat-msgs">
-        <div class="chat-row bot">
-          <div class="chat-av bot">🤖</div>
-          <div class="chat-bub">Hello! I'm your ClawbotOS assistant. How can I help you today?</div>
-        </div>
-      </div>
+      <div class="chat-sessions-bar" id="chat-sessions-bar"></div>
+      <div class="chat-msgs" id="chat-msgs"></div>
       <div class="chat-ft">
         <div class="chat-mb" id="chat-mb">clawbot-core · connecting...</div>
         <div class="chat-mode-bar">
@@ -719,8 +725,82 @@ const S = {
   logAutoRefresh: true,
   logTimer: null
 };
-const chatHistory = [];
+let chatHistory = [];
 let streaming = false;
+let currentSessionId = null;
+
+// ═══ SESSIONS ═══
+const SESS_API = '/api/core/sessions';
+
+function sessId() { return 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+async function sessLoad(id) {
+  try { const r = await fetch(SESS_API + '/' + id); return r.ok ? await r.json() : null; } catch { return null; }
+}
+async function sessSave() {
+  if (!currentSessionId) return;
+  const name = (chatHistory.find(m => m.role === 'user')?.content || 'New chat').slice(0, 40);
+  const mode = chatModeState?.mode || 'core';
+  try { await fetch(SESS_API + '/' + currentSessionId, { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name, mode, messages: chatHistory }) }); } catch {}
+}
+async function sessDelete(id, e) {
+  e.stopPropagation();
+  try { await fetch(SESS_API + '/' + id, { method:'DELETE' }); } catch {}
+  if (id === currentSessionId) await sessNew();
+  else await sessRender();
+}
+async function sessSwitch(id) {
+  const sess = await sessLoad(id);
+  if (!sess) return;
+  currentSessionId = id;
+  chatHistory = sess.messages || [];
+  clearChatUI();
+  chatHistory.forEach(m => { const b = addRow(m.role==='user'?'user':'bot'); b.textContent = m.content; });
+  setChatMode(sess.mode || 'core');
+  await sessRender();
+}
+async function sessNew() {
+  currentSessionId = sessId();
+  chatHistory = [];
+  clearChatUI();
+  setChatMode('core');
+  await sessSave();
+  await sessRender();
+}
+function clearChatUI() {
+  const c = $('chat-msgs');
+  c.innerHTML = '';
+  if (chatHistory.length === 0) {
+    const row = document.createElement('div'); row.className='chat-row bot';
+    const av = document.createElement('div'); av.className='chat-av bot'; av.textContent='🤖';
+    const bub = document.createElement('div'); bub.className='chat-bub'; bub.textContent="Hello! I'm your ClawbotOS assistant. How can I help you today?";
+    row.appendChild(av); row.appendChild(bub); c.appendChild(row);
+  }
+}
+async function sessRender() {
+  let sessions = [];
+  try { const r = await fetch(SESS_API); if (r.ok) { const d = await r.json(); sessions = d.sessions || []; } } catch {}
+  const bar = $('chat-sessions-bar');
+  bar.innerHTML = '';
+  sessions.forEach(s => {
+    const tab = document.createElement('button');
+    tab.className = 'sess-tab' + (s.id === currentSessionId ? ' active' : '');
+    tab.onclick = () => sessSwitch(s.id);
+    const nm = document.createElement('span'); nm.className='sess-tab-name'; nm.textContent = s.name || 'New chat';
+    const del = document.createElement('span'); del.className='sess-del'; del.textContent='×';
+    del.onclick = (e) => sessDelete(s.id, e);
+    tab.appendChild(nm); tab.appendChild(del); bar.appendChild(tab);
+  });
+  const nb = document.createElement('button'); nb.className='sess-new'; nb.textContent='+ New'; nb.onclick=sessNew;
+  bar.appendChild(nb);
+}
+async function sessInit() {
+  let sessions = [];
+  try { const r = await fetch(SESS_API); if (r.ok) { const d = await r.json(); sessions = d.sessions || []; } } catch {}
+  if (sessions.length) { await sessSwitch(sessions[0].id); }
+  else { await sessNew(); }
+}
 
 // ═══ MODEL SUGGESTIONS ═══
 const MODELS = {
@@ -1329,6 +1409,7 @@ async function sendChat() {
     if (!full) full = '(empty response)';
     bb.textContent = full;
     chatHistory.push({role:'assistant', content:full});
+    sessSave();
   } catch(err) {
     bb.textContent = '⚠ ' + err.message;
     bb.classList.add('err');
@@ -1386,6 +1467,7 @@ async function initFromServer() {
 }
 
 initFromServer();
+sessInit();
 refreshStats();
 setInterval(refreshStats, 5000);
 setTimeout(checkDashboardUpdate, 3000);
