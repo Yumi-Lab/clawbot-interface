@@ -111,6 +111,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .chat-snd:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .chat-snd svg{width:17px;height:17px}
 
+/* ─── WORKSPACE ─── */
+.ws-wrap{display:flex;flex-direction:column;height:100%;background:var(--bg)}
+.ws-toolbar{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--br);background:var(--bg-c);flex-shrink:0}
+.ws-title{font-family:var(--fmo);font-size:.8rem;color:var(--tp);font-weight:600}
+.ws-path{font-family:var(--fmo);font-size:.65rem;color:var(--td);flex:1}
+.ws-refresh{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r);border:1px solid var(--br);background:transparent;color:var(--td);font-family:var(--fmo);font-size:.65rem;cursor:pointer;transition:var(--tr)}
+.ws-refresh:hover{border-color:var(--ac);color:var(--ac)}
+.ws-grid{flex:1;overflow-y:auto;padding:20px;display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px;scrollbar-width:thin;scrollbar-color:var(--br) transparent}
+.ws-empty{width:100%;text-align:center;padding:60px 0;font-family:var(--fmo);font-size:.75rem;color:var(--td)}
+.ws-file{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 14px;border-radius:10px;border:1px solid var(--br);background:var(--bg-c);width:130px;cursor:pointer;transition:var(--tr);text-decoration:none;position:relative}
+.ws-file:hover{border-color:var(--ac);background:var(--ac-d);transform:translateY(-2px)}
+.ws-file-icon{font-size:2rem;line-height:1}
+.ws-file-name{font-family:var(--fmo);font-size:.62rem;color:var(--tp);text-align:center;word-break:break-all;max-width:100%}
+.ws-file-size{font-family:var(--fmo);font-size:.55rem;color:var(--td)}
+.ws-file-del{position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:4px;border:none;background:transparent;color:var(--td);font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:var(--tr)}
+.ws-file:hover .ws-file-del{opacity:1}
+.ws-file-del:hover{background:var(--er);color:#fff}
 /* ─── PANEL SCROLL ─── */
 .pscr{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:18px;scrollbar-width:thin;scrollbar-color:var(--br) transparent}
 .sec-t{font-family:var(--fmo);font-size:.63rem;font-weight:600;color:var(--ac);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
@@ -286,6 +303,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       <span class="lbl">Files</span>
     </button>
+    <button class="sb-item" id="nav-workspace" onclick="show('workspace');loadWorkspace()" title="Agent Workspace">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      <span class="lbl">Workspace</span>
+    </button>
     <button class="sb-item" id="nav-logs" onclick="show('logs')" title="Logs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H5l-3 3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>
       <span class="lbl">Logs</span>
@@ -388,6 +409,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           </div>
           <textarea class="file-textarea" id="file-content" spellcheck="false"></textarea>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── WORKSPACE ─── -->
+  <div class="pnl" id="pnl-workspace">
+    <div class="ws-wrap">
+      <div class="ws-toolbar">
+        <span class="ws-title">Agent Workspace</span>
+        <span class="ws-path">/home/pi/.picoclaw/workspace</span>
+        <button class="ws-refresh" onclick="loadWorkspace()" title="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="ws-grid" id="ws-grid">
+        <div class="ws-empty">Loading...</div>
       </div>
     </div>
   </div>
@@ -821,7 +859,7 @@ const PROV_DEFAULTS = {
   ollama:     {model:'llama3',     url:'http://192.168.1.100:11434/v1', placeholder:'(no key needed)'},
   custom:     {model:'',           url:'', placeholder:'your-api-key'}
 };
-const PANEL_TITLES = {setup:'Getting Started',chat:'Chat',files:'Files',logs:'Logs',monitor:'System Monitor',services:'Services',config:'Settings'};
+const PANEL_TITLES = {setup:'Getting Started',chat:'Chat',files:'Files',workspace:'Workspace',logs:'Logs',monitor:'System Monitor',services:'Services',config:'Settings'};
 
 // ═══ SIDEBAR ═══
 function toggleSB() {
@@ -836,9 +874,17 @@ function show(name) {
   document.getElementById('pnl-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
   document.getElementById('tb-title').textContent = PANEL_TITLES[name];
+  if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
   if (name === 'logs') startLogRefresh();
   else stopLogRefresh();
 }
+window.addEventListener('hashchange', () => {
+  const name = location.hash.slice(1);
+  if (name && document.getElementById('pnl-' + name)) {
+    show(name);
+    if (name === 'workspace') loadWorkspace();
+  }
+});
 
 // ═══ GAUGES ═══
 const CIRC = 2 * Math.PI * 32;
@@ -1421,6 +1467,53 @@ async function sendChat() {
   }
 }
 
+// ═══ WORKSPACE ═══
+function wsIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map = {
+    pdf:'📄', png:'🖼️', jpg:'🖼️', jpeg:'🖼️', gif:'🖼️', svg:'🖼️', webp:'🖼️',
+    mp4:'🎬', mov:'🎬', avi:'🎬', mp3:'🎵', wav:'🎵',
+    zip:'🗜️', gz:'🗜️', tar:'🗜️',
+    py:'🐍', js:'📜', sh:'⚙️', json:'📋', csv:'📊', txt:'📝', md:'📝',
+    html:'🌐', css:'🎨',
+  };
+  return map[ext] || '📁';
+}
+function wsSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+async function loadWorkspace() {
+  const grid = $('ws-grid');
+  grid.innerHTML = '<div class="ws-empty">Loading...</div>';
+  try {
+    const r = await fetch('/api/core/workspace');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const files = d.files || [];
+    if (!files.length) { grid.innerHTML = '<div class="ws-empty">No files in workspace yet.<br>Ask the agent to create something!</div>'; return; }
+    grid.innerHTML = '';
+    files.forEach(f => {
+      const card = document.createElement('a');
+      card.className = 'ws-file';
+      card.href = '/api/core/workspace/' + encodeURIComponent(f.name);
+      card.download = f.name;
+      card.title = 'Download ' + f.name;
+      const icon = document.createElement('div'); icon.className='ws-file-icon'; icon.textContent = wsIcon(f.name);
+      const name = document.createElement('div'); name.className='ws-file-name'; name.textContent = f.name;
+      const size = document.createElement('div'); size.className='ws-file-size'; size.textContent = wsSize(f.size || 0);
+      const del = document.createElement('button'); del.className='ws-file-del'; del.textContent='×'; del.title='Delete';
+      del.onclick = async (e) => { e.preventDefault(); e.stopPropagation(); if (!confirm('Delete ' + f.name + '?')) return;
+        await fetch('/api/core/workspace/' + encodeURIComponent(f.name), {method:'DELETE'}); loadWorkspace(); };
+      card.appendChild(icon); card.appendChild(name); card.appendChild(size); card.appendChild(del);
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    grid.innerHTML = '<div class="ws-empty">Error loading workspace: ' + e.message + '</div>';
+  }
+}
+
 // ═══ TOAST ═══
 function toast(msg, isErr) {
   const el = document.createElement('div');
@@ -1466,6 +1559,16 @@ async function initFromServer() {
   updateCloudStatus();
 }
 
+// Restore panel from URL hash on load
+(function() {
+  const name = location.hash.slice(1);
+  if (name && document.getElementById('pnl-' + name)) {
+    show(name);
+    if (name === 'workspace') loadWorkspace();
+  } else {
+    show('chat');
+  }
+})();
 initFromServer();
 sessInit();
 refreshStats();
