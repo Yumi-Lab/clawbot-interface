@@ -93,6 +93,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .chat-inp{flex:1;padding:11px 15px;background:var(--bg-i);border:1px solid var(--br);border-radius:var(--r);color:var(--tp);font-family:var(--fm);font-size:.88rem;outline:none;resize:none;max-height:120px;min-height:42px;transition:var(--tr);line-height:1.4}
 .chat-inp:focus{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac-d)}
 .chat-inp::placeholder{color:var(--td)}
+.chat-mode-bar{display:flex;gap:6px;margin-bottom:8px}
+.chat-mode-btn{padding:3px 12px;border-radius:20px;border:1px solid var(--br);background:transparent;color:var(--td);font-family:var(--fmo);font-size:.62rem;cursor:pointer;transition:var(--tr)}
+.chat-mode-btn.active{background:var(--ac-d);border-color:var(--ac-m);color:var(--ac)}
 .chat-snd{width:42px;height:42px;background:var(--ac);border:none;border-radius:var(--r);color:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr);flex-shrink:0}
 .chat-snd:hover{box-shadow:0 0 20px var(--ac-d);transform:scale(1.05)}
 .chat-snd:disabled{opacity:.4;cursor:not-allowed;transform:none}
@@ -320,6 +323,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <div class="chat-ft">
         <div class="chat-mb" id="chat-mb">clawbot-core · connecting...</div>
+        <div class="chat-mode-bar">
+          <button class="chat-mode-btn active" id="mode-core" onclick="setChatMode('core')" title="ClawbotCore orchestrator + module tools">Core</button>
+          <button class="chat-mode-btn" id="mode-agent" onclick="setChatMode('agent')" title="Picoclaw native agent — 14 built-in tools (files, exec, web...)">Agent</button>
+        </div>
         <div class="chat-ir">
           <textarea class="chat-inp" id="chat-inp" rows="1" placeholder="Ask your AI assistant..." onkeydown="chatKey(event)" oninput="autoH(this)"></textarea>
           <button class="chat-snd" id="chat-snd" onclick="sendChat()" title="Send (Enter)">
@@ -1266,6 +1273,18 @@ function addRow(role) {
   return bub;
 }
 
+const chatModeState = { mode: 'core' }; // 'core' or 'agent'
+
+function setChatMode(m) {
+  chatModeState.mode = m;
+  ['core','agent'].forEach(id => $id('mode-'+id).classList.toggle('active', id === m));
+  const label = m === 'agent' ? 'picoclaw agent · 14 tools' : 'clawbot-core · orchestrator';
+  $('chat-mb').textContent = label;
+  $id('chat-inp').placeholder = m === 'agent'
+    ? 'Ask the agent (can read/write files, run commands, search web...)'
+    : 'Ask your AI assistant...';
+}
+
 async function sendChat() {
   if (streaming) return;
   const inp = $id('chat-inp');
@@ -1277,7 +1296,9 @@ async function sendChat() {
   const bb = addRow('bot'); bb.classList.add('streaming');
   streaming = true; $id('chat-snd').disabled = true;
   try {
-    const ep = `/api/${S.agent}/v1/chat/completions`;
+    const ep = chatModeState.mode === 'agent'
+      ? '/api/core/v1/picoclaw-agent'
+      : `/api/${S.agent}/v1/chat/completions`;
     const hdrs = {'Content-Type':'application/json'};
     if (S.cfg.apikey) hdrs['Authorization'] = 'Bearer ' + S.cfg.apikey;
     const res = await fetch(ep, {
