@@ -103,9 +103,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .sess-del:hover{opacity:1;background:var(--er);color:#fff}
 .sess-new{padding:4px 10px;border-radius:7px;border:1px solid var(--br);background:transparent;color:var(--ac);font-family:var(--fmo);font-size:.65rem;cursor:pointer;flex-shrink:0;white-space:nowrap;transition:var(--tr)}
 .sess-new:hover{background:var(--ac-d)}
-.chat-mode-bar{display:flex;gap:6px;margin-bottom:8px}
+.chat-mode-bar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
 .chat-mode-btn{padding:3px 12px;border-radius:20px;border:1px solid var(--br);background:transparent;color:var(--td);font-family:var(--fmo);font-size:.62rem;cursor:pointer;transition:var(--tr)}
 .chat-mode-btn.active{background:var(--ac-d);border-color:var(--ac-m);color:var(--ac)}
+.chat-view-toggle{margin-left:auto;display:flex;align-items:center;gap:5px;font-family:var(--fmo);font-size:.58rem;color:var(--td)}
+.chat-view-toggle span{user-select:none}
+.toggle-sw{width:28px;height:15px;border-radius:8px;background:var(--br);position:relative;cursor:pointer;transition:var(--tr);border:none;flex-shrink:0}
+.toggle-sw.on{background:var(--ac-m)}
+.toggle-sw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:var(--tr)}
+.toggle-sw.on::after{left:15px}
 .chat-snd{width:42px;height:42px;background:var(--ac);border:none;border-radius:var(--r);color:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--tr);flex-shrink:0}
 .chat-snd:hover{box-shadow:0 0 20px var(--ac-d);transform:scale(1.05)}
 .chat-snd:disabled{opacity:.4;cursor:not-allowed;transform:none}
@@ -353,6 +359,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="chat-mode-bar">
           <button class="chat-mode-btn active" id="mode-core" onclick="setChatMode('core')" title="ClawbotCore orchestrator + module tools">Core</button>
           <button class="chat-mode-btn" id="mode-agent" onclick="setChatMode('agent')" title="Picoclaw native agent — 14 built-in tools (files, exec, web...)">Agent</button>
+          <div class="chat-view-toggle" id="view-toggle-wrap" style="display:none">
+            <span>Clean</span>
+            <button class="toggle-sw" id="view-toggle" onclick="toggleVerbose()" title="Show full trace / iterations"></button>
+            <span>Trace</span>
+          </div>
         </div>
         <div class="chat-ir">
           <textarea class="chat-inp" id="chat-inp" rows="1" placeholder="Ask your AI assistant..." onkeydown="chatKey(event)" oninput="autoH(this)"></textarea>
@@ -1399,7 +1410,7 @@ function addRow(role) {
   return bub;
 }
 
-const chatModeState = { mode: 'core' }; // 'core' or 'agent'
+const chatModeState = { mode: 'core', verbose: false };
 
 function setChatMode(m) {
   chatModeState.mode = m;
@@ -1409,6 +1420,13 @@ function setChatMode(m) {
   $id('chat-inp').placeholder = m === 'agent'
     ? 'Ask the agent (can read/write files, run commands, search web...)'
     : 'Ask your AI assistant...';
+  // Show verbose toggle only in agent mode
+  $id('view-toggle-wrap').style.display = m === 'agent' ? '' : 'none';
+}
+
+function toggleVerbose() {
+  chatModeState.verbose = !chatModeState.verbose;
+  $id('view-toggle').classList.toggle('on', chatModeState.verbose);
 }
 
 async function sendChat() {
@@ -1427,9 +1445,11 @@ async function sendChat() {
       : `/api/${S.agent}/v1/chat/completions`;
     const hdrs = {'Content-Type':'application/json'};
     if (S.cfg.apikey) hdrs['Authorization'] = 'Bearer ' + S.cfg.apikey;
+    const reqBody = {model: S.cfg.model || 'default', messages: chatHistory, stream:true};
+    if (chatModeState.mode === 'agent' && chatModeState.verbose) reqBody.verbose = true;
     const res = await fetch(ep, {
       method:'POST', headers:hdrs,
-      body: JSON.stringify({model: S.cfg.model || 'default', messages: chatHistory, stream:true})
+      body: JSON.stringify(reqBody)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0,200)}`);
     const reader = res.body.getReader();
